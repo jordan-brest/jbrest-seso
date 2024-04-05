@@ -1,9 +1,55 @@
 "use strict";
 
-// Print all entries, across all of the *async* sources, in chronological order.
+const MinHeap = require("../lib/min-heap");
 
+// Print all entries, across all of the *async* sources, in chronological order.
 module.exports = (logSources, printer) => {
   return new Promise((resolve, reject) => {
-    resolve(console.log("Async sort complete."));
+    //Populate the heap
+    const queue = new MinHeap();
+    const promises = logSources.map((logSource) => {
+      const prom = logSource.popAsync().then((logEntry) => {
+        const node = {
+          logEntry,
+          logSource,
+          weight: logEntry.date
+        };
+        queue.add(node);
+      });
+      return prom;
+    });
+    Promise.all(promises).then(() => {
+      //Print function
+      function print() {
+        printer.done();
+        resolve(console.log("Async sort complete."));
+      }
+
+      //Function to async drain heap until empty
+      function asyncPopQueue() {
+        if (queue.size() > 0) {
+          const node = queue.remove();
+          if (node.logEntry) printer.print(node.logEntry);
+          return node.logSource.popAsync().then((logEntry) => {
+            if (logEntry) { 
+              const item = {
+                logEntry,
+                logSource: node.logSource,
+                weight: logEntry.date
+              };
+              queue.add(item);
+            };
+            if (queue.size() > 0) {
+              asyncPopQueue();
+            } else {
+              print();
+            }
+          });
+        } else {
+          print();
+        }
+      };
+
+      asyncPopQueue()
   });
-};
+})};

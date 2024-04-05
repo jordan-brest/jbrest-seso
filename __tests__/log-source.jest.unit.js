@@ -1,4 +1,5 @@
 const LogSource = require("../lib/log-source");
+const Printer = require("../lib/printer");
 
 describe("Log Source Behaviors", () => {
   test("It should synchronously drain a log source", () => {
@@ -25,5 +26,33 @@ describe("Log Source Behaviors", () => {
     source.last.date = new Date();
     entry = await source.popAsync();
     expect(entry).toBeFalsy();
+  });
+});
+
+describe("Sorted Merge Behaviors", () => {
+  const sourceCount = 10;
+  
+  test("It should synchronously drain all log sources", () => {
+    const syncLogSources = [];
+    for (let i = 0; i < sourceCount; i++) {
+      syncLogSources.push(new LogSource());
+    }
+    require("../solution/sync-sorted-merge")(syncLogSources, new Printer());
+    syncLogSources.forEach((source) => {
+      expect(source.drained).toBeTruthy();
+    });
+  });
+
+  test("It should asynchronously drain all log sources", () => {
+    const asyncLogSources = [];
+    for (let i = 0; i < sourceCount; i++) {
+      asyncLogSources.push(new LogSource());
+    }
+    require("../solution/async-sorted-merge")(asyncLogSources, new Printer())
+        .then(() => {
+          asyncLogSources.forEach((source) => {
+            expect(source.drained).toBeTruthy();
+          });
+        })
   });
 });
